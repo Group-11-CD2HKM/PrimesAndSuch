@@ -5,12 +5,15 @@ bool exit = false;
 bool notANumber = false;
 string input;
 uint number = 0;
+PrimeHelper.PreCalculatePrimes();
 while (!exit)
 {
 	Console.Write("Write a number (type \"exit\" to exit): ");
     input = Console.ReadLine();
+    input = Console.ReadLine();
 	try
 	{
+		notANumber = false;
 		number = uint.Parse(input);
 	}
 	catch (Exception)
@@ -40,3 +43,4 @@ while (!exit)
 		}
 	}
 }
+PrimeHelper.StopPrecalculatePrimes();
