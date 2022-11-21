@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,18 +9,22 @@ namespace PrimesAndSuch
 {
     internal static class PrimeHelper
     {
-        private static List<uint> primes = new List<uint>();
+        private static List<ulong> primes = new List<ulong>();
         private static object primesLock = new object();
         private static Thread PreCalculationThread;
         private static bool PreCalculationEnabled;
+        private static bool PreCalculationPause;
 
-        public static List<uint> Primes
+        public static int PreCalculatedPrimesCount { get { return primes.Count; } }
+        public static ulong GetPrecalculatedPrimeAtIndex(int i)
         {
-            get { return primes; }
+            lock (primesLock) { return primes[i]; }
         }
+
         public static void PreCalculatePrimes()
         {
             PreCalculationEnabled = true;
+            PreCalculationPause = false;
             PreCalculationThread = new Thread(new ThreadStart(PreCalculateThread));
             PreCalculationThread.Start();
         }
@@ -27,23 +32,26 @@ namespace PrimesAndSuch
         {
             PreCalculationEnabled = false;
         }
+        public static void PausePrecalculatePrimes()
+        {
+            PreCalculationPause = true;
+        }
+        public static void UnPausePrecalculatePrimes()
+        {
+            PreCalculationPause = false;
+        }
         private static void PreCalculateThread()
         {
             uint i = 0;
             while (PreCalculationEnabled)
             {
-                if (IsPrime(i))
-                {
-                    lock (primesLock)
-                    {
-                        primes.Add(i);
-                    }
-                }
+                IsPrime(i);
                 i++;
             }
         }
-        public static bool IsPrime(uint number)
+        public static bool IsPrime(ulong number)
         {
+            bool returnValue = true;
             lock (primesLock)
             {
                 if (primes.Contains(number))
@@ -51,18 +59,39 @@ namespace PrimesAndSuch
                     return true;
                 }
             }
-            for (int i = 2; i < number; i++)
+            if (number == 2)
             {
-                if (number % i == 0)
+                returnValue = true;
+            }
+            else if (number % 2 == 0)
+            {
+                returnValue = false;
+            }
+            else
+            {
+                Parallel.ForEach(SteppedIterator(3, number / 2, 2), i =>
                 {
-                    return false;
+                    if (number % (ulong)i == 0)
+                    {
+                        returnValue = false;
+                    }
+                });
+            }
+            if (!returnValue)
+            {
+                lock (primesLock)
+                {
+                    primes.Add(number);
                 }
             }
-            lock (primesLock)
+            return returnValue;
+        }
+        private static IEnumerable<ulong> SteppedIterator(ulong startIndex, ulong endIndex, ulong stepSize)
+        {
+            for (ulong i = startIndex; i < endIndex; i = i + stepSize)
             {
-                primes.Add(number);
+                yield return i;
             }
-            return true;
         }
     }
 }
