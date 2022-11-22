@@ -52,6 +52,7 @@ namespace PrimesAndSuch
         public static bool IsPrime(ulong number)
         {
             bool returnValue = true;
+            object lockReturnValue = new object();
             lock (primesLock)
             {
                 if (primes.Contains(number))
@@ -69,15 +70,42 @@ namespace PrimesAndSuch
             }
             else
             {
-                Parallel.ForEach(SteppedIterator(3, number / 2, 2), i =>
+                Parallel.ForEach(SteppedIterator(3, (ulong)Math.Sqrt(number) + 1, 2), (i, state) =>
                 {
                     if (number % (ulong)i == 0)
                     {
-                        returnValue = false;
+                        if (returnValue)
+                        {
+                            lock (lockReturnValue)
+                            {
+                                if (returnValue)
+                                {
+                                    returnValue = false;
+                                }
+                            }
+                        }
+                        state.Break();
                     }
                 });
+                //foreach (var i in SteppedIterator(3, (ulong)Math.Sqrt(number)+1, 2))
+                //{
+                //    if (number % (ulong)i == 0)
+                //    {
+                //        if (returnValue)
+                //        {
+                //            lock (lockReturnValue)
+                //            {
+                //                if (returnValue)
+                //                {
+                //                    returnValue = false;
+                //                }
+                //            }
+                //        }
+                //        break;
+                //    }
+                //}
             }
-            if (!returnValue)
+            if (returnValue)
             {
                 lock (primesLock)
                 {
